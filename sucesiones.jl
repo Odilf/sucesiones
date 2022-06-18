@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.4
+# v0.19.5
 
 using Markdown
 using InteractiveUtils
@@ -10,6 +10,9 @@ using PlutoUI
 # ╔═╡ db76cd30-4697-4185-b6b2-7e587ccd970e
 using Memoize
 
+# ╔═╡ ecb6a3f0-9177-4c4e-baae-2746b7ab3f9f
+const τ = 2 * π
+
 # ╔═╡ 6c214774-23ca-4159-9796-28c322b0c91b
 md"""
 ## 1. Sines
@@ -19,7 +22,10 @@ The function $\sin(n)$ is cyclic, so it makes sense to use it. We can adjust its
 $$a_n = \sin\left( \frac{2\pi}{3} n \right)$$
 
 However, I used $\tau$ back then and, while it certainly is a questionable choice, I will respect it today. 
+"""
 
+# ╔═╡ bcfd55ef-227b-42a0-b0cd-ccfe98c0442c
+md"""
 $$a_n = \sin\left( \frac{n \tau}{3} \right)$$
 
 Thus, we have $\frac{\sqrt{3}}{2}$, $-\frac{\sqrt{3}}{2}$, $0$, ...
@@ -45,9 +51,23 @@ $$a_n = n \left(
 
 """
 
+# ╔═╡ b699514c-2bc4-45dd-8814-b96beb181984
+function a(n::Integer)
+	sine = sin(n * τ / 3)
+	switch = (sine * 2/sqrt(3))^2
+	
+	# We round it becuase it's inexact and we have something like 2.39e-31
+	switch = round(Int, switch) 
+	
+	r = n * switch
+end
+
+# ╔═╡ 794a27af-6bf7-4ea7-b913-32b0fabc9c9b
+sines = [a(n) for n in 1:20]
+
 # ╔═╡ 38302ed6-6bbb-4c19-8ae9-802b880497c0
 md"""
-It's interesting to note that this method wouldn't work so nicely with periods greater than 3. We were lucky that the reciprocal is the same for the two values that weren't 0. We can't just divide because we would have a problem with $\frac{0}{0}$. 
+It's interesting to note that this method wouldn't work so nicely with periods other than 3. We were lucky that the magnitude of the reciprocal is the same for the two values that weren't 0 (and we couldn't just divide because we would have a problem with $\frac{0}{0}$). 
 """
 
 # ╔═╡ 5862bfb5-b6ac-409f-a9cd-24fa6ac13861
@@ -75,6 +95,16 @@ $$b_n = n \left(
 
 """
 
+# ╔═╡ 41ba0028-3f91-4695-8c5e-89283e03aa66
+function b(n::Integer)
+	sine = ℯ^(im * n * τ / 3)
+	switch = round(Int, imag(sine) * 2/sqrt(3)) ^ 2
+	r = n * switch
+end
+
+# ╔═╡ 4dc4a23e-e8cb-4bc9-b70f-37a5ff4192b5
+complex = [b(n) for n in 1:20]
+
 # ╔═╡ 95cea978-dfed-4212-8ed9-450d42303ac9
 md"""
 ## 3. Check multiples
@@ -89,7 +119,7 @@ So if we're searching for positive multples of 3, we want the following conditio
 
 $$\exists k \in \mathbb{N} : n = 3k$$
 
-Saying $n = 3k$ is the same as saying $3k - n = 0$. We don't know value of $k$, so what could we do?
+The expression $n = 3k$ implies $3k - n = 0$. However, we don't know value of $k$, so what could we do?
 
 Well, we can just try all of the values of $k$. If (and only if) $n$ is actually a multiple of $3$ the previous difference will be $0$. If we take the product of all the differences, we will have a $0$ when $n$ is a multiple of $3$ and a different number otherwise. 
 
@@ -100,7 +130,9 @@ $$p_n = \prod_{k=1}^{\infty} (3k - n)$$
 
 # ╔═╡ 9a008407-cb25-42da-8855-45e79e1693cc
 md"""
-Now we have to leverage some special property that $0$ has. One such property is that $0! = 1$. The only other number that has $1$ as its factorial is $1! = 1$, but if we just multiply $p_n$ by $2$ we will have our desired effect. We should also square it to avoid getting the gamma definition of the factorial. 
+Now we have $0$ for multiples of 3 and some large product otherwise. Therefore, we have to find some way to leverage some special property that $0$ has. 
+
+One such property is that $0! = 1$. The only other number that has $1$ as its factorial is $1! = 1$, but if we just multiply $p_n$ by $2$ we will have our desired effect. We should also square it to avoid getting the gamma definition of the factorial when applied to negative numbers. 
 
 This way, not only every other number will not return $1$, *it will return an even number* (since every factorial after $2!$ has a factor of $2$). To summirize: 
 
@@ -110,7 +142,7 @@ $$2{p_n}^2 = \begin{cases}
 \end{cases}$$
 
 Now we can use a property of the parity of numbers. Namely, the fact that
-$(-1)^{2k} = 1$ and $(-1)^{2k + 1} = -1$. We can reduce to 0 the odd case by adding $1$ and, since that will retun $2$ on the even case, we can divide by $2$. Thus we have a solution: 
+$(-1)^{2k} = 1$ and $(-1)^{2k + 1} = -1$. We can reduce to $0$ the odd case by adding $1$ and, since that will retun $2$ on the even case, we can divide by $2$. Thus we have a solution: 
 
 $$c_n = \frac{n}{2} \left(
 	(-1)^{2{p_n}^2!} + 1
@@ -132,7 +164,7 @@ product = [c(n) for n in 1:20]
 
 # ╔═╡ ca4207ca-70c3-46ce-9ce7-0f1e74e5885e
 md"""
-It's easy to see that the product will never have to go past $n$ (or even $\frac{n}{3}$). I find the infinity more mathematically aesthetic, but I used $n$ on the implementation. Also we have to reduce the product because we are taking a hilariously big factorial which will never be able to compute after a certain point. We can do this because we can proove that the parity is the only important aspect and will remain the same. 
+It's easy to see that the product will never have to go past $n$ (or even $\frac{n}{3}$). I find the infinity more mathematically aesthetic, but I used $n$ on the implementation. Also we have to reduce the product because we are taking a hilariously big factorial which will never be able to compute after a certain point. We can do this because we can prove that the parity is the only important aspect and will remain the same. 
 
 This solution is very clear and very easy to modify for other periods (just replace the $3$!). 
 """
@@ -261,38 +293,8 @@ end
 # ╔═╡ 2dde6e60-89a2-44e8-a03d-46861a78a72e
 recurse = [e(n) for n in 1:20]
 
-# ╔═╡ ecb6a3f0-9177-4c4e-baae-2746b7ab3f9f
-const τ = 2 * π
-
-# ╔═╡ b699514c-2bc4-45dd-8814-b96beb181984
-function a(n::Integer)
-	sine = sin(n * τ / 3)
-	switch = (sine * 2/sqrt(3))^2
-	
-	# We round it becuase it's inexact and we have something like 2.39e-31
-	switch = round(Int, switch) 
-	
-	r = n * switch
-end
-
-# ╔═╡ 794a27af-6bf7-4ea7-b913-32b0fabc9c9b
-sines = [a(n) for n in 1:20]
-
-# ╔═╡ 41ba0028-3f91-4695-8c5e-89283e03aa66
-function b(n::Integer)
-	sine = ℯ^(im * n * τ / 3)
-	switch = round(Int, imag(sine) * 2/sqrt(3)) ^ 2
-	r = n * switch
-end
-
-# ╔═╡ 4dc4a23e-e8cb-4bc9-b70f-37a5ff4192b5
-complex = [b(n) for n in 1:20]
-
 # ╔═╡ 32208c9d-b713-45ba-8fb2-039edf1ed333
 @assert(sines == complex == product == subtract == recurse)
-
-# ╔═╡ f8d4e9e3-9b95-49e1-a467-35efa7688d06
-TableOfContents()
 
 # ╔═╡ b4fc3f8d-2316-4b51-87d7-ecb1c21974c9
 spacer = html"<br><br><br>"
@@ -312,6 +314,9 @@ $spacer
 ## Appendix
 """
 
+# ╔═╡ f8d4e9e3-9b95-49e1-a467-35efa7688d06
+TableOfContents()
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -327,9 +332,8 @@ PlutoUI = "~0.7.39"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.0-DEV.1456"
+julia_version = "1.7.3"
 manifest_format = "2.0"
-project_hash = "545624ef689da1d90578048054e4f2249f0a96eb"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -339,7 +343,6 @@ version = "1.1.4"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
-version = "1.1.1"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -349,14 +352,13 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "a985dc37e357a3b22b260a5def99f3530fb415d3"
+git-tree-sha1 = "0f4e115f6f34bbe43c19751c90a38b2f380637b9"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.11.2"
+version = "0.11.3"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "0.5.0+0"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -365,7 +367,6 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
-version = "1.6.0"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -407,12 +408,10 @@ version = "0.21.3"
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
 uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
-version = "0.6.3"
 
 [[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
-version = "7.73.0+4"
 
 [[deps.LibGit2]]
 deps = ["Base64", "NetworkOptions", "Printf", "SHA"]
@@ -421,7 +420,6 @@ uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
 [[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
 uuid = "29816b5a-b9ab-546f-933c-edad1886dfa8"
-version = "1.9.1+2"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -446,7 +444,6 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.24.0+2"
 
 [[deps.Memoize]]
 deps = ["MacroTools"]
@@ -459,16 +456,13 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2020.7.22"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
-version = "1.2.0"
 
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.17+2"
 
 [[deps.Parsers]]
 deps = ["Dates"]
@@ -479,7 +473,6 @@ version = "2.3.1"
 [[deps.Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.8.0"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
@@ -506,7 +499,6 @@ version = "1.2.2"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
-version = "0.7.0"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
@@ -525,12 +517,10 @@ uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 [[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-version = "1.0.0"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.0"
 
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
@@ -551,27 +541,25 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
-version = "1.2.12+1"
 
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.0.1+0"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
-version = "1.41.0+1"
 
 [[deps.p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
-version = "16.2.1+1"
 """
 
 # ╔═╡ Cell order:
 # ╟─c033f642-d767-11ec-2504-c5ef2d0d844b
 # ╟─6c214774-23ca-4159-9796-28c322b0c91b
+# ╠═ecb6a3f0-9177-4c4e-baae-2746b7ab3f9f
+# ╟─bcfd55ef-227b-42a0-b0cd-ccfe98c0442c
 # ╠═b699514c-2bc4-45dd-8814-b96beb181984
 # ╟─794a27af-6bf7-4ea7-b913-32b0fabc9c9b
 # ╟─38302ed6-6bbb-4c19-8ae9-802b880497c0
@@ -593,10 +581,9 @@ version = "16.2.1+1"
 # ╟─2dde6e60-89a2-44e8-a03d-46861a78a72e
 # ╠═32208c9d-b713-45ba-8fb2-039edf1ed333
 # ╟─012086b5-52f0-4078-b6f4-05f7ae411b2d
-# ╟─ecb6a3f0-9177-4c4e-baae-2746b7ab3f9f
+# ╟─b4fc3f8d-2316-4b51-87d7-ecb1c21974c9
 # ╟─ee6af700-2e4f-48fb-b364-d16240675b7a
 # ╟─db76cd30-4697-4185-b6b2-7e587ccd970e
 # ╟─f8d4e9e3-9b95-49e1-a467-35efa7688d06
-# ╟─b4fc3f8d-2316-4b51-87d7-ecb1c21974c9
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
